@@ -1,1 +1,1 @@
-Some Pythone and other scripts will appear here.
+Some Python and other scripts will appear here.
