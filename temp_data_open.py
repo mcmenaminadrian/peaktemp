@@ -29,7 +29,7 @@ data = {
     zip_strip[0]:Observation_End_Time,
     zip_strip[1]:Observation_Hour_Count,
     zip_strip[2]:Max_Air_Temp,
-    zip_strip[3]:Max_Air_Temp
+    zip_strip[3]:Min_Air_Temp
 }
 temp_data_frame = pd.DataFrame(data)
 print(temp_data_frame)
