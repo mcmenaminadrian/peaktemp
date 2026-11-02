@@ -2,50 +2,66 @@ import pandas as pd
 
 def fix_data_frame(temp_data_frame) -> pd.DataFrame:
     fixed_data_frame = {}
-    # fix types of dataframe columns
-    fix_temp_cols(temp_data_frame)
+    # fix dataframe column
+    fix_temp_date_col(temp_data_frame)
     # Convert all 12 hour observations into 24 hour obseravtions
     fixed_data_frame = one_day_observations(temp_data_frame)
     # Fix nissing days in the dataframe
-    fixed_data_frame = report_missing_days(fixed_data_frame)
+    report_missing_days(fixed_data_frame)
     return fixed_data_frame
 
-def fix_temp_cols(temp_data_frame):
-    # Convert the columns to appropriate types
+def fix_temp_date_col(temp_data_frame):
+    # Convert the date col to appropriate types
     temp_data_frame['ob_end_time'] = pd.to_datetime(temp_data_frame['ob_end_time'], errors='coerce')
     try:
         temp_data_frame['ob_hour_count'] = temp_data_frame['ob_hour_count'].astype(float)
     except:
         print("Error converting 'ob_hour_count' to float. Please check the data for non-numeric values.")
-    try:
-        temp_data_frame['max_air_temp'] = temp_data_frame['max_air_temp'].astype(float)
-    except:
-        print("Error converting 'max_air_temp' to float. Please check the data for non-numeric values.")
-    try:
-        temp_data_frame['min_air_temp'] = temp_data_frame['min_air_temp'].astype(float)
-    except:
-        print("Error converting 'min_air_temp' to float. Please check the data for non-numeric values.")
 
 def one_day_observations(temp_data_frame) -> pd.DataFrame:
     # Convert all 12 hour observations into 24 hour observations
+    # fix the type of the columns as we go along
     # Create a new dataframe to store the fixed data
+    force_continue = False
     fixed_data_frame = pd.DataFrame(columns=temp_data_frame.columns)
-
     for index, row in temp_data_frame.iterrows():
-        if row['ob_hour_count'] == 12:
-            if row['ob_end_time'].hour == 21:
-                # if observation is at 9pm then update the following days 9am observation to collective min/max
-                temp_data_frame.loc[index + 1, 'max_air_temp'] = max(row['max_air_temp'], temp_data_frame.loc[index + 1, 'max_air_temp'])
-                temp_data_frame.loc[index + 1, 'min_air_temp'] = min(row['min_air_temp'], temp_data_frame.loc[index + 1, 'min_air_temp'])
-                #update the observation hour count to 24
-                temp_data_frame.loc[index + 1, 'ob_hour_count'] = 24
-            elif row['ob_end_time'].hour == 9:
-                print(f"DID NOT FIX: Observation at 9am on {row['ob_end_time']} with 12 hour count, skipping for now.")
-            else:
+        if force_continue:
+            force_continue = False
+            continue
+        if row['ob_hour_count'] == 24:
+            try:
+                micro_data_frame = pd.DataFrame([[row['ob_end_time'],
+                                                  row['ob_hour_count'],
+                                                  float(row['max_air_temp']),
+                                                  float(row['min_air_temp'])]],
+                                                columns=temp_data_frame.columns)
+            except Exception as e:
+                print(f"Error creating micro dataframe for observation:", row['ob_end_time'], f"with error: {e}")
+                continue
+            fixed_data_frame = pd.concat([fixed_data_frame, micro_data_frame], ignore_index=True)
+            continue
+        elif row['ob_end_time'].hour == 9:
+            if (row['ob_hour_count'] != 12):
+                print(f"STRANGE TIME: Observation at {row['ob_end_time']} with {row['ob_hour_count']} hour count, skipping for now.")
+            continue;
+        else:
+            if row['ob_end_time'].hour != 21:
                 print(f"STRANGE TIME: Observation at {row['ob_end_time']} with {row['ob_hour_count']} hour count, skipping for now.")
                 continue
-        
-        fixed_data_frame = pd.concat([fixed_data_frame, row.to_frame().T], ignore_index=True)
+            else:
+                try:
+                    min_temp = min(float(row['min_air_temp']), float(temp_data_frame.loc[index + 1, 'min_air_temp']))
+                    max_temp = max(float(row['max_air_temp']), float(temp_data_frame.loc[index + 1, 'max_air_temp']))
+                except Exception as e:
+                    print(f"Error occurred while processing min/maxobservation at {row['ob_end_time']}: {e}")
+                    continue
+                micro_data_frame = pd.DataFrame([[temp_data_frame.loc[index + 1, 'ob_end_time'],
+                                                 24,
+                                                 max_temp,
+                                                 min_temp]],
+                                                columns=temp_data_frame.columns)
+                fixed_data_frame = pd.concat([fixed_data_frame, micro_data_frame], ignore_index=True)
+                force_continue = True
 
     return fixed_data_frame
     

@@ -1,5 +1,6 @@
 import csv
 import pandas as pd
+import os
 from processstempframe import fix_data_frame
 
 years = range(1874, 2026)
