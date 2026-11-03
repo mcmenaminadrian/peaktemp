@@ -24,41 +24,62 @@ def one_day_observations(temp_data_frame) -> pd.DataFrame:
     # Create a new dataframe to store the fixed data
     force_continue = False
     fixed_data_frame = pd.DataFrame(columns=temp_data_frame.columns)
+    last_max = 0.0
+    last_min = 0.0
+    old_max = 0.0
+    old_min = 0.0
+    last_min_temp = 0.0
+    last_max_temp = 0.0
+    old_min_temp = 0.0
+    old_max_temp = 0.0
     for index, row in temp_data_frame.iterrows():
         if force_continue:
             force_continue = False
             continue
         if row['ob_hour_count'] == 24:
             try:
+                last_max = float(row['max_air_temp'])
+                last_min = float(row['min_air_temp'])
                 micro_data_frame = pd.DataFrame([[row['ob_end_time'],
                                                   row['ob_hour_count'],
-                                                  float(row['max_air_temp']),
-                                                  float(row['min_air_temp'])]],
+                                                  last_max,
+                                                  last_min]],
                                                 columns=temp_data_frame.columns)
+                old_max = last_max
+                old_min = last_min
             except Exception as e:
                 print(f"Error creating micro dataframe for observation:", row['ob_end_time'], f"with error: {e}")
-                continue
+                # fix by subsituting last value - not injecting any new temps then
+                micro_data_frame = pd.DataFrame([[row['ob_end_time'],
+                                                      row['ob_hour_count'],
+                                                      old_max,
+                                                      old_min]],
+                                                    columns=temp_data_frame.columns)
             fixed_data_frame = pd.concat([fixed_data_frame, micro_data_frame], ignore_index=True)
             continue
         elif row['ob_end_time'].hour == 9:
             if (row['ob_hour_count'] != 12):
-                print(f"STRANGE TIME: Observation at {row['ob_end_time']} with {row['ob_hour_count']} hour count, skipping for now.")
+                print(f"***STRANGE LENGTH: Observation at {row['ob_end_time']} with {row['ob_hour_count']} hour count, skipping for now.")
             continue;
         else:
             if row['ob_end_time'].hour != 21:
-                print(f"STRANGE TIME: Observation at {row['ob_end_time']} with {row['ob_hour_count']} hour count, skipping for now.")
+                print(f"***STRANGE TIME: Observation at {row['ob_end_time']} with {row['ob_hour_count']} hour count, skipping for now.")
                 continue
             else:
                 try:
-                    min_temp = min(float(row['min_air_temp']), float(temp_data_frame.loc[index + 1, 'min_air_temp']))
-                    max_temp = max(float(row['max_air_temp']), float(temp_data_frame.loc[index + 1, 'max_air_temp']))
+                    last_min_temp = min(float(row['min_air_temp']), float(temp_data_frame.loc[index + 1, 'min_air_temp']))
+                    last_max_temp = max(float(row['max_air_temp']), float(temp_data_frame.loc[index + 1, 'max_air_temp']))
+                    old_min_temp = last_min_temp
+                    old_max_temp = last_max_temp
                 except Exception as e:
                     print(f"Error occurred while processing min/maxobservation at {row['ob_end_time']}: {e}")
-                    continue
+                    # again fix by subsituting last value - not injecting any new temps then
+                    last_min_temp = old_min_temp
+                    last_max_temp = old_max_temp
                 micro_data_frame = pd.DataFrame([[temp_data_frame.loc[index + 1, 'ob_end_time'],
                                                  24,
-                                                 max_temp,
-                                                 min_temp]],
+                                                 last_max_temp,
+                                                 last_min_temp]],
                                                 columns=temp_data_frame.columns)
                 fixed_data_frame = pd.concat([fixed_data_frame, micro_data_frame], ignore_index=True)
                 force_continue = True
