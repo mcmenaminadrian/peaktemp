@@ -2,22 +2,32 @@ import csv
 import pandas as pd
 import os
 from processstempframe import fix_data_frame
+# set some basic parameters
+
+# new_data_frame = fix_data_frame()
+# raise SystemExit("Exiting after creating new data frame from pickle file.")
 
 years = range(1874, 2026)
+
+# empty data structs to hold later results
 rows = []
 Observation_End_Time = []
 Observation_Hour_Count = []
 Max_Air_Temp = []
 Min_Air_Temp = []
 
+# list of headings we want
 zip_strip = ['ob_end_time', 'ob_hour_count', 'max_air_temp', 'min_air_temp']
+# elements of the file name
 file_name_string = "midas-open_uk-daily-temperature-obs_dv-202607_western-isles_00054_stornoway-airport_qcv-1_"
-path_base = "../../raw_data/places/STORNOWAY/"
+path_base = "../raw_data/places/STORNOWAY/"
+
+# Open each year file in turn and read the data into a dataframe, then process it to fix any issues with the data.
 for year in years:
     file_path = path_base + file_name_string + str(year) + ".csv"
     with open(file_path) as readings_file:
         for n in range(93):
-            readings_file.readline()
+            readings_file.readline() # skip the first 93 lines of the file, which are header information
         csv_readings = csv.DictReader(readings_file)
         #fields = next(csv_readings)
         for row in csv_readings:
@@ -36,5 +46,8 @@ data = {
 }
 temp_data_frame = pd.DataFrame(data)
 print(temp_data_frame)
+temp_data_frame.to_pickle("temp_data_frame.pkl")
+#new_data_frame = fix_data_frame()
+# Now repair the data
 new_data_frame = fix_data_frame(temp_data_frame)
 print(new_data_frame)

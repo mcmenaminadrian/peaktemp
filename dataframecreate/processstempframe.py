@@ -1,13 +1,18 @@
 import pandas as pd
 
+
+
 def fix_data_frame(temp_data_frame) -> pd.DataFrame:
+    #def fix_data_frame() ->pd.DataFrame:
+    # temp_data_frame = pd.read_pickle("./temp_data_frame.pkl")
+    temp_data_frame = fix_obtimes(temp_data_frame)
+    # fix missing days currently obnly reports missing days, but does not fix them.
+    fix_missing_days(temp_data_frame)
     fixed_data_frame = {}
     # fix dataframe column
     fix_temp_date_col(temp_data_frame)
     # Convert all 12 hour observations into 24 hour obseravtions
     fixed_data_frame = one_day_observations(temp_data_frame)
-    # Fix nissing days in the dataframe
-    report_missing_days(fixed_data_frame)
     return fixed_data_frame
 
 def fix_temp_date_col(temp_data_frame):
@@ -86,11 +91,27 @@ def one_day_observations(temp_data_frame) -> pd.DataFrame:
 
     return fixed_data_frame
     
-    
-
-def report_missing_days(temp_data_frame):
+def fix_obtimes(temp_data_frame) -> pd.DataFrame:
     # Convert the 'ob_end_time' column to datetime format
-    temp_data_frame['ob_end_time'] = pd.to_datetime(temp_data_frame['ob_end_time'], errors='coerce')
+    try:
+        temp_data_frame['ob_end_time'] = pd.to_datetime(temp_data_frame['ob_end_time'])
+    except Exception as e:
+        print(f"Error converting 'ob_end_time' to datetime: {e} - will now coerce")
+        temp_data_frame['ob_end_time'] = pd.to_datetime(temp_data_frame['ob_end_time'], errors='coerce')
+
+    # Check for any rows with NaT in 'ob_end_time' and print them
+    print("Checking for missing or invalid 'ob_end_time' values...")
+    missing_ob_times = temp_data_frame[temp_data_frame['ob_end_time'].isna()]
+    if not missing_ob_times.empty:
+        print("Rows with missing or invalid 'ob_end_time':")
+        print(missing_ob_times)
+    else:
+        print("No missing or invalid 'ob_end_time' values found.")
+    
+    return temp_data_frame
+
+def fix_missing_days(temp_data_frame) -> pd.DataFrame:
+
 
     # iterate through the dataframe and check for missing days
     missing_days = []
@@ -105,3 +126,9 @@ def report_missing_days(temp_data_frame):
         print("Missing days found:")
         for start, end in missing_days:
             print(f"Missing days between {start.date()} and {end.date()}")
+            
+            
+            
+#use the pickle to speed this up!
+#temp_data_frame = pd.read_pickle("./temp_data_frame.pkl")
+#fixed_data_frame = fix_data_frame(temp_data_frame)
