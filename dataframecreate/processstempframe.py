@@ -6,7 +6,7 @@ def fix_data_frame(temp_data_frame) -> pd.DataFrame:
     #def fix_data_frame() ->pd.DataFrame:
     # temp_data_frame = pd.read_pickle("./temp_data_frame.pkl")
     temp_data_frame = fix_obtimes(temp_data_frame)
-    # fix missing days currently obnly reports missing days, but does not fix them.
+    # fix missing days currently only reports missing days, but does not fix them.
     fix_missing_days(temp_data_frame)
     fixed_data_frame = {}
     # fix dataframe column
@@ -115,18 +115,26 @@ def fix_missing_days(temp_data_frame) -> pd.DataFrame:
 
     # iterate through the dataframe and check for missing days
     missing_days = []
+    last_good_day = temp_data_frame.loc[[0]]
     for i in range(len(temp_data_frame) - 1):
         current_day = temp_data_frame['ob_end_time'].iloc[i]
         next_day = temp_data_frame['ob_end_time'].iloc[i + 1]
         if pd.notnull(current_day) and pd.notnull(next_day):
             if (next_day - current_day).days > 1:
                 missing_days.append((current_day, next_day))
+                insert_data_frame = pd.DataFrame(last_good_day, columns=temp_data_frame.columns)
+                insert_data_frame['ob_end_time'] = current_day + pd.Timedelta(days=1)
+                temp_data_frame = pd.concat([temp_data_frame.iloc[:i], insert_data_frame, temp_data_frame.iloc[i + 1:]])
+                break
+        last_good_day = temp_data_frame.loc[[i]]
         
     if missing_days:
         print("Missing days found:")
         for start, end in missing_days:
             print(f"Missing days between {start.date()} and {end.date()}")
-            
+        fix_missing_days(temp_data_frame)
+    else:
+         print("No (further) missing days found.")   
             
             
 #use the pickle to speed this up!
