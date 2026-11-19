@@ -111,30 +111,27 @@ def fix_obtimes(temp_data_frame) -> pd.DataFrame:
     return temp_data_frame
 
 def fix_missing_days(temp_data_frame) -> pd.DataFrame:
-
-
+    print("Checking for missing days in the dataframe...")
     # iterate through the dataframe and check for missing days
-    missing_days = []
-    last_good_day = temp_data_frame.loc[[0]]
+    last_good_day = []
     for i in range(len(temp_data_frame) - 1):
         current_day = temp_data_frame['ob_end_time'].iloc[i]
         next_day = temp_data_frame['ob_end_time'].iloc[i + 1]
         if pd.notnull(current_day) and pd.notnull(next_day):
             if (next_day - current_day).days > 1:
-                missing_days.append((current_day, next_day))
-                insert_data_frame = pd.DataFrame(last_good_day, columns=temp_data_frame.columns)
-                insert_data_frame['ob_end_time'] = current_day + pd.Timedelta(days=1)
-                temp_data_frame = pd.concat([temp_data_frame.iloc[:i], insert_data_frame, temp_data_frame.iloc[i + 1:]])
-                break
-        last_good_day = temp_data_frame.loc[[i]]
-        
-    if missing_days:
-        print("Missing days found:")
-        for start, end in missing_days:
-            print(f"Missing days between {start.date()} and {end.date()}")
-        fix_missing_days(temp_data_frame)
-    else:
-         print("No (further) missing days found.")   
+                last_good_day = temp_data_frame.loc[[i]]
+                print(f"Missing days found between {current_day.date()} and {next_day.date()}")
+                print("Attemping fix...")
+                inserting_data_frame = pd.DataFrame(columns=temp_data_frame.columns)
+                for t in range(1, (next_day - current_day).days):
+                    inserting_data_frame = pd.concat([inserting_data_frame, last_good_day], ignore_index=True)
+                for t in range(0, len(inserting_data_frame)):
+                    inserting_data_frame['ob_end_time'].iloc[t] = current_day + pd.Timedelta(days=t + 1)
+                temp_data_frame = pd.concat([temp_data_frame.iloc[:i + 1], inserting_data_frame, temp_data_frame.iloc[i + 1:]]).reset_index(drop=True)
+                print("Inserted missing days into the dataframe.")
+                temp_data_frame = fix_missing_days(temp_data_frame)
+    print("No (further) missing days found.")
+    return temp_data_frame
             
             
 #use the pickle to speed this up!
