@@ -126,7 +126,7 @@ def fix_missing_days(temp_data_frame) -> pd.DataFrame:
                 for t in range(1, (next_day - current_day).days):
                     inserting_data_frame = pd.concat([inserting_data_frame, last_good_day], ignore_index=True)
                 for t in range(0, len(inserting_data_frame)):
-                    inserting_data_frame['ob_end_time'].iloc[t] = current_day + pd.Timedelta(days=t + 1)
+                    inserting_data_frame.loc[t, 'ob_end_time'] = current_day + pd.Timedelta(days=t + 1)
                 temp_data_frame = pd.concat([temp_data_frame.iloc[:i + 1], inserting_data_frame, temp_data_frame.iloc[i + 1:]]).reset_index(drop=True)
                 print("Inserted missing days into the dataframe.")
                 temp_data_frame = fix_missing_days(temp_data_frame)
