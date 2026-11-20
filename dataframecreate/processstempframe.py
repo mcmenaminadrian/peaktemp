@@ -7,7 +7,7 @@ def fix_data_frame(temp_data_frame) -> pd.DataFrame:
     # temp_data_frame = pd.read_pickle("./temp_data_frame.pkl")
     temp_data_frame = fix_obtimes(temp_data_frame)
     # fix missing days currently only reports missing days, but does not fix them.
-    fix_missing_days(temp_data_frame)
+    temp_data_frame = fix_missing_days(temp_data_frame)
     fixed_data_frame = {}
     # fix dataframe column
     fix_temp_date_col(temp_data_frame)
@@ -81,11 +81,16 @@ def one_day_observations(temp_data_frame) -> pd.DataFrame:
                     # again fix by subsituting last value - not injecting any new temps then
                     last_min_temp = old_min_temp
                     last_max_temp = old_max_temp
-                micro_data_frame = pd.DataFrame([[temp_data_frame.loc[index + 1, 'ob_end_time'],
+                try:
+                    micro_data_frame = pd.DataFrame([[temp_data_frame.loc[index + 1, 'ob_end_time'],
                                                  24,
                                                  last_max_temp,
                                                  last_min_temp]],
                                                 columns=temp_data_frame.columns)
+                except Exception as e:
+                    print(f"Error creating micro dataframe for observation:", row['ob_end_time'], f"with error: {e}")
+                    # actually we only gets this exception at the end, so we just skip it here
+                    return fixed_data_frame
                 fixed_data_frame = pd.concat([fixed_data_frame, micro_data_frame], ignore_index=True)
                 force_continue = True
 
@@ -122,6 +127,9 @@ def fix_missing_days(temp_data_frame) -> pd.DataFrame:
                 last_good_day = temp_data_frame.loc[[i]]
                 print(f"Missing days found between {current_day.date()} and {next_day.date()}")
                 print("Attemping fix...")
+                # Entering as NAs for now - needs more thought
+                last_good_day['max_air_temp'] = 'NA'
+                last_good_day['min_air_temp'] = 'NA'
                 inserting_data_frame = pd.DataFrame(columns=temp_data_frame.columns)
                 for t in range(1, (next_day - current_day).days):
                     inserting_data_frame = pd.concat([inserting_data_frame, last_good_day], ignore_index=True)
@@ -129,7 +137,7 @@ def fix_missing_days(temp_data_frame) -> pd.DataFrame:
                     inserting_data_frame.loc[t, 'ob_end_time'] = current_day + pd.Timedelta(days=t + 1)
                 temp_data_frame = pd.concat([temp_data_frame.iloc[:i + 1], inserting_data_frame, temp_data_frame.iloc[i + 1:]]).reset_index(drop=True)
                 print("Inserted missing days into the dataframe.")
-                temp_data_frame = fix_missing_days(temp_data_frame)
+                return fix_missing_days(temp_data_frame)
     print("No (further) missing days found.")
     return temp_data_frame
             
