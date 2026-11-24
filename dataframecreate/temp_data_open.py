@@ -1,5 +1,6 @@
 import csv
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
 from processstempframe import fix_data_frame
 # set some basic parameters
@@ -50,4 +51,6 @@ temp_data_frame.to_pickle("temp_data_frame.pkl")
 #new_data_frame = fix_data_frame()
 # Now repair the data
 new_data_frame = fix_data_frame(temp_data_frame)
-print(new_data_frame)
+new_data_frame.to_pickle("fixed_temp_data_frame.pkl")
+new_data_frame.plot(kind='line', x='ob_end_time', y=['max_air_temp', 'min_air_temp'], title='Stornoway Airport Daily Max and Min Temperatures')
+plt.show()
